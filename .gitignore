@@ -1,0 +1,5 @@
+bin/
+obj/
+.vs/
+IA/venv/
+*.user

@@ -1,0 +1,203 @@
+﻿@model IEnumerable<SamelabWeb.Controllers.EmpleadoResultado>
+
+@{
+    ViewData["Title"] = "Dashboard SAMELAB";
+}
+
+<style>
+    /* Estilos Modernos */
+    .card-dashboard { border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 25px; background: #fff; margin-bottom: 20px; border: none; }
+    .header-section { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }
+    
+    /* Pestañas Personalizadas */
+    .nav-tabs { border-bottom: 2px solid #dee2e6; }
+    .nav-tabs .nav-link { border: none; color: #6c757d; font-weight: 600; padding: 15px 25px; transition: 0.3s; }
+    .nav-tabs .nav-link.active { color: #1e3c72; border-bottom: 4px solid #1e3c72; background: transparent; }
+    .nav-tabs .nav-link:hover { color: #2a5298; border-bottom: 4px solid #cbd3e0; }
+
+    /* Contenedor de Power BI */
+    .iframe-container { position: relative; width: 100%; overflow: hidden; padding-top: 56.25%; border-radius: 10px; border: 1px solid #ddd; }
+    .responsive-iframe { position: absolute; top: 0; left: 0; bottom: 0; right: 0; width: 100%; height: 100%; border: none; }
+
+    /* Imágenes de Python */
+    .img-python { border-radius: 10px; width: 100%; height: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.05); transition: 0.3s; margin-bottom: 15px; }
+    .img-python:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+</style>
+
+<div class="container mt-4">
+    <div class="header-section text-center">
+        <h1 class="display-5 fw-bold">SAMELAB: Talent Intelligence Platform</h1>
+        <p class="lead mb-0">Análisis Predictivo de Rotación y Visualización de Datos (TFM)</p>
+    </div>
+
+    <ul class="nav nav-tabs mb-4 justify-content-center" id="tfmTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="presentacion-tab" data-bs-toggle="tab" data-bs-target="#presentacion" type="button">📌 Proyecto</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="carga-tab" data-bs-toggle="tab" data-bs-target="#carga" type="button">🤖 Análisis IA</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="graficas-tab" data-bs-toggle="tab" data-bs-target="#graficas" type="button">📊 Gráficas Python</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="bi-tab" data-bs-toggle="tab" data-bs-target="#bi" type="button">📈 Power BI</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="tfmTabsContent">
+        
+        <div class="tab-pane fade show active" id="presentacion" role="tabpanel">
+            <div class="card-dashboard text-center">
+                <div class="row align-items-center">
+                    <div class="col-md-8 text-start border-end">
+                        <h2 class="text-primary">¿Qué es SAMELAB?</h2>
+                        <p>SAMELAB es una solución integral diseñada para el departamento de Recursos Humanos que utiliza **Machine Learning** para identificar patrones de abandono laboral.</p>
+                        <p>A través de algoritmos de <strong>Regresión Logística</strong>, el sistema analiza variables como la satisfacción, el salario y la antigüedad para alertar sobre empleados con alto riesgo de renuncia.</p>
+                        <hr>
+                        <h5>Componentes Técnicos:</h5>
+                        <ul class="text-muted">
+                            <li>Backend en .NET Core 8 & MySQL</li>
+                            <li>Motor de IA en Python (Scikit-Learn)</li>
+                            <li>Analítica avanzada en Microsoft Power BI</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <img src="https://cdn-icons-png.flaticon.com/512/2103/2103633.png" alt="AI Icon" style="width: 150px; opacity: 0.8;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="carga" role="tabpanel">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card-dashboard">
+                        <h4 class="mb-3">Entrada de Datos</h4>
+                        <form asp-action="SubirCSV" method="post" enctype="multipart/form-data">
+                            <label class="form-label small fw-bold">1. Seleccionar Archivo CSV:</label>
+                            <input type="file" name="archivo" class="form-control mb-3" accept=".csv" required />
+                            <button type="submit" class="btn btn-primary w-100 shadow-sm">Cargar y Limpiar</button>
+                        </form>
+                        
+                        <div class="my-4 border-top pt-4">
+                            <label class="form-label small fw-bold">2. Procesar con Modelo IA:</label>
+                            <form asp-action="EjecutarIA" method="post">
+                                <button type="submit" class="btn btn-warning w-100 fw-bold shadow-sm">
+                                    <i class="bi bi-robot"></i> Generar Predicciones
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <canvas id="atritionChart" style="max-height: 200px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card-dashboard">
+                        <h4 class="mb-3">Lista de Predicciones</h4>
+                        <div class="table-responsive" style="max-height: 550px;">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Departamento</th>
+                                        <th>Puesto</th>
+                                        <th class="text-center">Riesgo Attrition</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model != null && Model.Any())
+                                    {
+                                        foreach (var emp in Model)
+                                        {
+                                            <tr>
+                                                <td><strong>#@emp.id</strong></td>
+                                                <td>@emp.Department</td>
+                                                <td>@emp.JobRole</td>
+                                                <td class="text-center">
+                                                    <span class="badge @(emp.Prediction == "Sí" ? "bg-danger" : "bg-success") px-3 py-2">
+                                                        @(emp.Prediction == "Sí" ? "ALTO RIESGO" : "ESTABLE")
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <tr><td colspan="4" class="text-center py-5 text-muted">Esperando carga de datos...</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="graficas" role="tabpanel">
+            <div class="card-dashboard">
+                <h3 class="mb-4">Métricas Generadas por Python</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-center text-uppercase fw-bold text-muted">Impacto por Departamento</h6>
+                        <img src="~/images/grafica_depto.png" class="img-python" onerror="this.src='https://placehold.co/600x400?text=Procese+la+IA+para+ver+gráfica'">
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-center text-uppercase fw-bold text-muted">Riesgo por Edad</h6>
+                        <img src="~/images/grafica_edad.png" class="img-python" onerror="this.src='https://placehold.co/600x400?text=Procese+la+IA+para+ver+gráfica'">
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <h6 class="text-center text-uppercase fw-bold text-muted">Densidad de Satisfacción Laboral</h6>
+                        <img src="~/images/grafica_satisfaccion.png" class="img-python" onerror="this.src='https://placehold.co/1200x400?text=Procese+la+IA+para+ver+gráfica'">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="bi" role="tabpanel">
+            <div class="card-dashboard">
+                <h3 class="mb-3">Reporte Estratégico de BI</h3>
+                <div class="iframe-container shadow">
+                    <iframe class="responsive-iframe" 
+                            src="https://app.powerbi.com/view?r=eyJrIjoiZGE2NmExODYtZDM2YS00N2EzLTg1MzMtYTVkOGQ0YzU3MGFkIiwidCI6ImQxMzQ3MmY3LTVkMmQtNGU5NS1iNmIwLWZhNWE1ODhjODMyZCIsImMiOjR9" 
+                            allowFullScreen="true"></iframe>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('atritionChart').getContext('2d');
+        const siVal = @(ViewBag.Si ?? 0);
+        const noVal = @(ViewBag.No ?? 0);
+
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Riesgo', 'Estable'],
+                datasets: [{
+                    data: [siVal, noVal],
+                    backgroundColor: ['#dc3545', '#198754'],
+                    hoverOffset: 4
+                }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+    });
+
+    document.querySelector('button[data-bs-target="#bi"]').addEventListener('shown.bs.tab', function () {
+        var iframe = document.querySelector('#bi iframe');
+        var url = iframe.src;
+        
+        // Refrescamos el src para que Power BI recalcule el tamaño real
+        iframe.src = '';
+        iframe.src = url;
+    });
+</script>

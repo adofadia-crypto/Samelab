@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/daa334a4-d91a-492e-8a77-0a02a77c2122/resourceGroups/Samelab_Recursos/providers/Microsoft.Web/sites/samelab-predicciones",
+    "appService.deploySubpath": "publish"
+}
