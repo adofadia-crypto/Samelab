@@ -1,7 +1,24 @@
-bin/
-obj/
+# --- .NET ---
+[Bb]in/
+[Oo]bj/
 .vs/
+.vscode/
+*.user
+*.userprefs
+appsettings.Development.json
+
+# --- Carpetas de Publicación (CRÍTICO) ---
+publish/
+/publish/
+[Pp]ublish/
+
+# --- Python ---
 IA/venv/
-*.userpublish/
-bin/
-obj/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# --- Archivos de Base de Datos Locales ---
+*.mdf
+*.ldf
