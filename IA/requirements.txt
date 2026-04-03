@@ -1,0 +1,7 @@
+cat << 'EOF' > IA/requirements.txt
+pandas
+numpy
+joblib
+sqlalchemy
+pyodbc
+EOF

@@ -2,4 +2,6 @@ bin/
 obj/
 .vs/
 IA/venv/
-*.user
+*.userpublish/
+bin/
+obj/
