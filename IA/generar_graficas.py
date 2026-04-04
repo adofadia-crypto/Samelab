@@ -2,64 +2,52 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-import sys
-from db_config import obtener_engine # Tu conexión centralizada
-import warnings
+from db_config import obtener_engine
 
-# Silenciamos avisos para que la consola de Azure se vea limpia
-warnings.filterwarnings("ignore", category=UserWarning)
+def generar_reporte_visual():
+    engine = obtener_engine()
+    if engine is None: return
 
-def ejecutar_graficas():
-    print("\n" + "="*40)
-    print("--- [PASO 1] GENERANDO GRÁFICAS ---")
-    print("="*40)
+    # 1. Cargar datos de la capa de ORO
+    query = "SELECT * FROM empleados_visualizacion"
+    df = pd.read_sql(query, engine)
 
-    try:
-        # 1. Conexión automática desde appsettings.json
-        engine = obtener_engine()
-        if not engine:
-            print("--- [ERROR] No se pudo establecer conexión para graficar ---")
-            return
+    # Configuración de estilo
+    sns.set_theme(style="whitegrid")
     
-        # 2. Lectura de datos finales
-        print("--- [PASO 2] Leyendo resultados de predicción ---")
-        df = pd.read_sql("SELECT * FROM empleados_visualizacion", engine)
+    # Ruta de salida (Ajustada para Azure y Local)
+    # Buscamos la carpeta wwwroot/images
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    output_folder = os.path.join(base_path, "..", "wwwroot", "images")
+    
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
-        if df.empty:
-            print("--- [ERROR] No hay datos en 'empleados_visualizacion' para graficar ---")
-            return
+    # --- GRÁFICA 1: Impacto por Departamento ---
+    plt.figure(figsize=(10, 6))
+    sns.countplot(data=df, x='Department', hue='RiskLevel', palette='viridis')
+    plt.title('Distribución de Riesgo por Departamento')
+    plt.savefig(os.path.join(output_folder, "grafica_depto.png"), bbox_inches='tight')
+    plt.close()
 
-        # 3. Configuración de la visualización
-        print("--- [PASO 3] Creando visualización con Seaborn ---")
-        sns.set_theme(style="whitegrid")
-        plt.figure(figsize=(10, 6))
-        
-        # Generamos la gráfica de barras con los resultados (Sí/No)
-        sns.countplot(data=df, x='Prediccion', palette='viridis')
-        plt.title('Distribución de Resultados de la IA (Samelab)', fontsize=15)
-        plt.xlabel('Predicción de Attrition', fontsize=12)
-        plt.ylabel('Cantidad de Empleados', fontsize=12)
+    # --- GRÁFICA 2: Riesgo por Probabilidad (Histograma) ---
+    # Nota: Como no tenemos 'Age' en la tabla de visualización, 
+    # usaremos la Probabilidad de Attrition que es muy visual
+    plt.figure(figsize=(10, 6))
+    sns.histplot(data=df, x='AttritionProbability', kde=True, color='skyblue')
+    plt.title('Densidad de Probabilidad de Abandono')
+    plt.savefig(os.path.join(output_folder, "grafica_edad.png"), bbox_inches='tight')
+    plt.close()
 
-        # 4. Manejo de Rutas para Azure y Local
-        # Importante: Buscamos la carpeta wwwroot/images relativa a la ejecución del Controller
-        output_dir = os.path.join(os.getcwd(), "wwwroot", "images")
-        
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print(f"--- Carpeta creada: {output_dir} ---")
+    # --- GRÁFICA 3: Satisfacción vs Riesgo ---
+    plt.figure(figsize=(12, 5))
+    # Simulamos una densidad basada en JobRole y Risk
+    sns.boxplot(data=df, x='RiskLevel', y='AttritionProbability', palette='magma')
+    plt.title('Análisis de Probabilidad por Nivel de Riesgo')
+    plt.savefig(os.path.join(output_folder, "grafica_satisfaccion.png"), bbox_inches='tight')
+    plt.close()
 
-        path_final = os.path.join(output_dir, "grafica_ia.png")
-        
-        # Guardamos y cerramos para liberar memoria
-        plt.savefig(path_final, bbox_inches='tight')
-        plt.close()
-        
-        print(f"--- [EXITO] Gráfica guardada en: {path_final} ---")
-        print("="*40)
-
-    except Exception as e:
-        print(f"\n!!! ERROR AL GRAFICAR: {str(e)}")
-        sys.exit(1)
+    print("--- [ÉXITO] Gráficas exportadas a wwwroot/images ---")
 
 if __name__ == "__main__":
-    ejecutar_graficas()
+    generar_reporte_visual()

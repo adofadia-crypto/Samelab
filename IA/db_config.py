@@ -1,60 +1,41 @@
 import os
 import json
-import urllib
-import platform
 import re
+import urllib.parse
 from sqlalchemy import create_engine
 
 def obtener_engine():
     try:
-        # 1. Localizar appsettings.json
-        ruta_final = os.path.join(os.getcwd(), "appsettings.json")
-        if not os.path.exists(ruta_final):
-            ruta_final = os.path.join(os.getcwd(), "..", "appsettings.json")
+        # 1. En Azure, el appsettings.json está siempre en esta ruta
+        ruta_config = "/home/site/wwwroot/appsettings.json"
         
-        # 2. Leer credenciales
-        with open(ruta_final, 'r') as f:
+        if not os.path.exists(ruta_config):
+            # Fallback por si ejecutas localmente para pruebas rápidas
+            ruta_config = os.path.join(os.getcwd(), "appsettings.json")
+
+        with open(ruta_config, 'r') as f:
             config = json.load(f)
         
-        raw_conn_str = config['ConnectionStrings']['DefaultConnection']
+        # 2. Extraer la cadena de conexión de C#
+        conn_str = config['ConnectionStrings']['DefaultConnection']
 
-        # 3. EXTRAER CREDENCIALES (Ajustado)
-        def buscar(patron, cadena):
-            res = re.search(patron, cadena, re.IGNORECASE)
-            return res.group(1) if res else ""
+        # 3. Limpiar los datos para el formato de SQLAlchemy + pymssql
+        # Buscamos: Server, User Id, Password y Database
+        server = re.search(r"Server=([^;]+)", conn_str, re.I).group(1).replace("tcp:", "").split(",")[0]
+        user = re.search(r"(?:User Id|Uid)=([^;]+)", conn_str, re.I).group(1)
+        password = re.search(r"(?:Password|Pwd)=([^;]+)", conn_str, re.I).group(1)
+        database = "samelab_db" # Nombre de tu DB en Azure
 
-        server = buscar(r"Server=([^;]+)", raw_conn_str).replace("tcp:", "")
-        user = buscar(r"(?:User Id|Uid)=([^;]+)", raw_conn_str)
-        password = buscar(r"(?:Password|Pwd)=([^;]+)", raw_conn_str)
+        # 4. Codificar el password (muy importante por si tiene caracteres raros)
+        pass_encoded = urllib.parse.quote_plus(password)
+
+        # 5. Crear el motor con el dialecto pymssql
+        # Formato: mssql+pymssql://usuario:password@servidor/base_de_datos
+        url_final = f"mssql+pymssql://{user}:{pass_encoded}@{server}/{database}?charset=utf8"
         
-        # FORZAMOS EL NOMBRE DE LA BD YA QUE EL BUSCADOR NO LO ENCONTRÓ
-        database = "samelab_db" 
-
-        # 4. CONFIGURAR DRIVER SEGÚN MAC O AZURE
-        sistema = platform.system()
-        driver = "{ODBC Driver 17 for SQL Server}"
-        
-        if sistema == "Darwin": # Tu Mac
-            driver_path = "/opt/homebrew/lib/libmsodbcsql.17.dylib"
-            if os.path.exists(driver_path):
-                driver = f"{{{driver_path}}}"
-
-        # 5. CONSTRUIR CADENA FINAL PERFECTA
-        conn_str = (
-            f"Driver={driver};"
-            f"Server={server};"
-            f"Database={database};"
-            f"Uid={user};"
-            f"Pwd={password};"
-            f"Encrypt=yes;"
-            f"TrustServerCertificate=no;"
-        )
-
-        print(f"--- [DEBUG LOCAL] Conectando a: {server} | BD: {database} ---")
-        
-        params = urllib.parse.quote_plus(conn_str)
-        return create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
+        print(f"--- [AZURE ENGINE] Conectando a {server} ---")
+        return create_engine(url_final)
 
     except Exception as e:
-        print(f"--- [ERROR] --- \nDetalle: {e}")
+        print(f"--- [ERROR AZURE ENGINE] --- \nDetalle: {e}")
         return None

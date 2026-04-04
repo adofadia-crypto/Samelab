@@ -1,46 +1,44 @@
 import pandas as pd
 import sys
-from db_config import obtener_engine # Tu llave maestra
+from db_config import obtener_engine
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
 def ejecutar_limpieza():
     print("\n" + "="*40)
-    print("--- [PASO 1] INICIANDO LIMPIEZA DE DATOS ---")
+    print("--- [PASO 1] LIMPIEZA DE DATOS (BRONCE -> PLATA) ---")
     print("="*40)
 
     try:
-        # Aquí ya no necesitas poner server ni password, db_config lo hace por ti
         engine = obtener_engine()
         if not engine:
-            print("--- [ERROR] No se pudo conectar a la base de datos ---")
+            print("!!! ERROR: No se pudo conectar a Azure SQL.")
             return
             
-        # Añade esto para debuggear:
-        from sqlalchemy import inspect
-        inspector = inspect(engine)
-        print(f"--- [DEBUG] Tablas detectadas: {inspector.get_table_names()} ---")
-
-        print("--- [PASO 3] Cargando tabla 'empleados' desde Azure ---")
+        # 1. Leer datos crudos
         df = pd.read_sql("SELECT * FROM empleados", engine)
         
         if df.empty:
-            print("--- [AVISO] La tabla origen está vacía ---")
+            print("--- [AVISO] Tabla 'empleados' vacía. Sube un CSV primero.")
             return
 
-        # --- [PASO 4] Tu lógica de limpieza (Se queda exactamente igual) ---
-        print("--- [PASO 4] Procesando limpieza y transformación ---")
-        df_limpio = df.copy() 
-        
-        # Aquí puedes agregar df_limpio.fillna(0) si ves que hay nulos, pero si así te funciona, déjalo así.
+        # 2. Proceso de Limpieza
+        df_limpio = df.copy()
 
-        print(f"--- [PASO 5] Guardando {len(df_limpio)} registros limpios ---")
-        # 'replace' asegura que la tabla siempre esté fresca para la IA
+        # Eliminamos cualquier columna de resultados previa si existiera por error
+        columnas_resultados = ['PredictedAttrition', 'AttritionProbability', 'RiskLevel', 'Prediccion']
+        df_limpio = df_limpio.drop(columns=[col for col in columnas_resultados if col in df_limpio.columns], errors='ignore')
+
+        # Manejo de nulos básico
+        df_limpio = df_limpio.fillna(0)
+
+        # 3. Guardar en la tabla de entrenamiento/predicción (Plata)
+        print("--- [PASO 2] Guardando en 'empleados_limpios' ---")
         df_limpio.to_sql('empleados_limpios', con=engine, if_exists='replace', index=False)
         
         print("="*40)
-        print("--- [EXITO] Datos listos para la IA ---")
+        print(f"--- [ÉXITO] Datos listos para la IA ---")
         print("="*40)
 
     except Exception as e:
