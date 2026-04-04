@@ -22,3 +22,4 @@ __pycache__/
 # --- Archivos de Base de Datos Locales ---
 *.mdf
 *.ldf
+appsettings.json
