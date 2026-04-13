@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import mysql.connector
 
-# Conexión a tu MAMP
+# Conexión al MAMP
 conn = mysql.connector.connect(
     user='root', password='root', host='localhost', port='8889', database='samelab_db'
 )

@@ -1,15 +1,17 @@
+#originalmente corriamos este sh, pero bloqueaba el servidor y no corria el sitio, entonces se decidió alojar las dlls en la carpeta de usuario del srvidor linux, y asi ya quedan disponibles,
+#ya que en cada reinicio del servidor se eliminaban las instalaciones
 #!/bin/bash
 
 # 1. Ir a la carpeta de trabajo
 cd /home/site/wwwroot/IA || exit
 
 echo "--- [PASO 1] Configurando Drivers de Microsoft SQL ---"
-# Intentamos correr tu script de drivers. 
+# Intentamos correr los script. 
 # Nota: Si falla por permisos, el script seguirá adelante gracias al '|| true'
 {
     curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft-archive-keyring.gpg 2>/dev/null
     echo "deb [arch=amd64,arm64,armhf] https://packages.microsoft.com/debian/12/prod bookworm main" > mssql-release.list
-    # En Azure App Service no solemos tener apt-get, pero lo intentamos por si tu plan lo permite
+    # En Azure App Service no solemos tener apt-get, pero lo intentamos
     apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17 unixodbc-dev
 } || echo "Aviso: No se pudieron instalar drivers de sistema (falta sudo), usando drivers preinstalados."
 
